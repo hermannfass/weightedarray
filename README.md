@@ -41,5 +41,7 @@ Or install it yourself as:
 ## To do
 
    WeightedArray#<<()
-   WeightedArray.new( <Array> ) # with default likelihood
-   WeightedArray#to_s()         # to list key values only
+   WeightedArray.new( <Array> ) # Initialize all with default likelihood 1
+   WeightedArray.search(q_str)  # Find WeightedElement by value
+   WeightedArray#to_s()         # List key values only
+
