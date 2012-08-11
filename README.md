@@ -38,10 +38,3 @@ Or install it yourself as:
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
 
-## To do
-
-   WeightedArray#<<()
-   WeightedArray.new( <Array> ) # Initialize all with default likelihood 1
-   WeightedArray.search(q_str)  # Find WeightedElement by value
-   WeightedArray#to_s()         # List key values only
-
