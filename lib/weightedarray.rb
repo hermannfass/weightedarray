@@ -1,3 +1,5 @@
+require 'pp'
+$:.push( File.dirname(__FILE__) )
 require 'weightedarray/version'
 
 # Classes for managing Arrays with weighted elements.
@@ -6,74 +8,133 @@ require 'weightedarray/version'
 # a way that each element has a specified likelihood of
 # occurring.
 
-# Class for weighted elements which can go (get pushed) for
-# example into a WeightedArray instance.
-# A WeightedArray is represented by its value (an instance of any class)
-# and a weight (an integer number, usually a Fixnum instance),
-# where 1 is the base weight.
-class WeightedElement
-
-  # Value of this element. Can be an instance of any class.
-  attr :value
-
-  # Weight of this element. This is an integer representing the
-  # importance of this element.
-  attr :weight
-
-  # Initialize a new instance.
-  def initialize( value, weight = 1 )
-    @value = value
-    @weight = weight   
-  end
-
+# Exception raised when an operation would result in a negative
+# weight of an element.
+class InvalidWeightError < StandardError
 end
 
-# Class for lists of WeightedElements.
-# When choosing elements at random (#sample) the likelihood for
-# each element to get picked is derived from its importance, i.e.
-# the value of its weight attribute.
+# Class representing an Array of elements with additional random
+# selection support: The elements do have a weight assigned that
+# determines the likelihood of each to be picked by the sample()
+# method. The weight is a positive integer number. 
+# The absolute value has no specific meaning; the weight is relative to
+# other elements: An element with a weight of 10 has twice the
+# likelihood of being chosen than one with a weight of 5.
 class WeightedArray < Array
 
-  # Initialize a new instance. If a data Hash is provided this
-  # is taken to add an initial set of WeightedElements to this
-  # WeightedArray. In that case the Hash keys are the values
-  # to be added and the Hash values become the weight of this
-  # value.
-  def initialize( elements_hash = {} )
-    super()
-    elements_hash.each do |value, weight|
-      self.push( WeightedElement.new(value, weight) )
-    end
-  end
+  # Hash with each element as key and the respective weight as value.
+  attr_accessor :weight
 
-  # Append a WeightedElement to this WeightedArray.
-  # The argument sent to this method can be the WeightedArray
-  # instance that should go into this WeightedArray. It can
-  # also be any Object, in which case an instance of
-  # WeightedElement gets created. In that case a second
-  # argument represents the weight of this (defaults to 1).
-  def push( what, weight = 1 )
-    if (what.class == WeightedElement)
-      super( what )
-    else
-      super( WeightedElement.new(what, weight) )
-    end
-  end
-
-  # Return one WeightedElement's value from this WeightedArray,
-  # selected at random. When choosing this element randomly, the
-  # weights of the WeightedElements determine the likelihood of
-  # getting picked, i.e. elements with a high weight will get
-  # picked more often than those with a low likelihood.
-  def sample()
-    occurrence_weighted = Array.new
-    self.each do |element|
-      element.weight.times do
-        occurrence_weighted.push( element )
+  # Initialize a new instance. 
+  # If the data sent to the constructor is a Hash it is assume that
+  # it shows the elements as keys and their likelihood as value.
+  # When an Array is sent this is interpreted as list elements,
+  # each of which gets a weight of 1 assigned.
+  def initialize( data = nil )
+    @weight = {}
+    if ( data.kind_of?(Hash) )
+      data.each do |element, weight|
+        push(element, weight)
       end
+    elsif ( data.kind_of?(Array) )
+      self.replace(data)
+      data.each { |d| @weight[d] = 1 }
+    elsif ( data.nil? )
+    else
+      self.replace([data])
+      @weight[data] = 1
     end
-    occurrence_weighted.sample.value
+  end
+
+  # Append an element.
+  # The second argument represents the weight of this element.
+  def push( what, weight = 1 )
+    if ( weight.kind_of?(Integer) )
+      if (weight > 0)
+        super(what)
+        @weight[what] = weight
+      elsif (weight == 0)
+        super(what)
+        $stderr.puts "Warning: Adding an element with weight 0 does not" <<
+                     "seem very useful, but is accepted."
+        @weight[what] = weight
+      elsif (weight < 0)
+        raise InvalidWeightError,
+              "Trying to assign a negative weight of #{weight} to " +
+              "element #{what.to_s}"
+      end
+    elsif ( weight.kind_of?(Numeric) )
+      $stderr.puts "Warning: Weight #{weight} is not an integer number. " <<
+                   "Rounding it to #{weight.round}."
+      push(what, weight.round)
+    else
+      raise InvalidWeightError,
+            "When pushing an element to a WeightedArray the weight, if " <<
+            "provided, needs to be a positive numeric value."
+    end
+  end
+
+  alias :<< :push
+
+  # Return a random element from the WeightedArray, giving each
+  # element the likelihood of getting picked represented by its weight.
+  def sample()
+    weighted_list = Array.new
+    self.each do |element, weight|
+      weight.times { weighted_list.push(element) }
+    end
+    weighted_list.sample
+  end
+
+  # Change the weight of an element. Selects elements that match the
+  # element specified in the first argument, utilizing the == operator
+  # for comparison. The weight of the matching elements is incremented by
+  # the (positive or negative) amount provided as second argument.
+  def change_weight( element_to_grade, inc = 0 )
+    self.select{|element| element == element_to_grade}.each do |elm|
+      @weight[elm] = weight_of(elm) + inc
+    end
+  end
+
+  # Increase the weight of an element; by default by 1.
+  def upgrade( element, inc = 1 )
+    change_weight( element, inc )
+  end
+
+  # Decrease the weight of an element; by default by 1.
+  def downgrade( element, dec = 1 )
+    begin
+      if ( weight_of(element) < dec )
+        raise InvalidWeightError,
+              "Trying to downgrade an element to a negative weight "
+              "(#{weight_of(element)-dec}). Element: #{element.to_s}"
+      end
+      change_weight(element, -dec)
+    rescue InvalidWeightError => e
+      $stderr.puts "Warning: #{e.message} Weight set to 0."
+      @weight[element] = 0
+    end
+  end
+
+  # Return the weight of an element.
+  # If the weight of an element has not yet been set this will return
+  # a value of 1.
+  def weight_of( element )
+    @weight[element] || 1
+  end
+
+  def debug_output()
+    self.collect{|elm| "#{elm}: #{@weight[elm]}"}.join("\n")
   end
 
 end
+
+a = WeightedArray.new
+a.push("eins", 10)
+a.push("zwei", 10.5)
+a.push("drei", 0)
+a.downgrade("drei")
+
+puts a.debug_output
+
 
