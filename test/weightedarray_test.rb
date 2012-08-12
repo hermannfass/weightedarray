@@ -8,8 +8,18 @@ class WeightedArrayTest < Test::Unit::TestCase
 
   def setup
     @wa = WeightedArray.new(['Anton', 'Berti', 'Conni'])
+    @tmp_file = '/tmp/weightedarraytestoutput.txt'
     begin
-      $stderr = File.open('/tmmp/weightedarraytestoutput.txt', 'w')
+      @old_stderr = $stderr
+      $stderr = File.open(@tmp_file, 'w')
+    rescue
+    end
+  end
+
+  def teardown
+    begin
+      $stderr = @old_stderr
+      File.delete(@tmp_file)
     rescue
     end
   end
