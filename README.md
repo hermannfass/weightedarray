@@ -21,13 +21,12 @@ Or install it yourself as:
 
     require 'weightedarray'
     names = WeightedArray.new(
-      { 'Anton'=>1, 'Berti'=>1, 'Conny'=>1, 'Det'=>5, 'Edi'=>1 }
+      { 'Anton'=>1, 'Berti'=>1, 'Conny'=>1, 'Det'=>3, 'Edi'=>1 }
     )
-    names.push( {'Fritzchen'=>10} )
-    # In the following the name "Fritzchen" will be shown
-    # with a likelihood of 10:1 compared to Anton's and
-    # with a likelihood of 2:1 compared to Det's:
-    puts names.sample 
+    names.push( {'Fritzchen', 10} )
+    puts names.sample       # 10 times more likely 'Fritzchen' then 'Anton'.
+    names.upgrade('Det', 7)
+    puts names.sample       # Now 'Det' as likely as 'Fritzchen'.
     
 
 ## Contributing
