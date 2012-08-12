@@ -49,28 +49,33 @@ class WeightedArray < Array
   # Append an element.
   # The second argument represents the weight of this element.
   def push( what, weight = 1 )
+    if (new_weight = validated_weight_value(weight) )
+      super(what)
+      @weight[what] = new_weight
+    end
+  end
+
+  def validated_weight_value( weight )
     if ( weight.kind_of?(Integer) )
       if (weight > 0)
-        super(what)
-        @weight[what] = weight
+        weight
       elsif (weight == 0)
-        super(what)
-        $stderr.puts "Warning: Adding an element with weight 0 does not" <<
+        $stderr.puts "Warning: A weight of 0 does not " <<
                      "seem very useful, but is accepted."
-        @weight[what] = weight
+        weight
       elsif (weight < 0)
         raise InvalidWeightError,
-              "Trying to assign a negative weight of #{weight} to " +
-              "element #{what.to_s}"
+              "A negative weight of #{weight} is not possible."
+        false
       end
     elsif ( weight.kind_of?(Numeric) )
       $stderr.puts "Warning: Weight #{weight} is not an integer number. " <<
                    "Rounding it to #{weight.round}."
-      push(what, weight.round)
+      weight.round
     else
       raise InvalidWeightError,
-            "When pushing an element to a WeightedArray the weight, if " <<
-            "provided, needs to be a positive numeric value."
+            "The weight of an element must be a positive, numeric value."
+      false
     end
   end
 
@@ -80,8 +85,10 @@ class WeightedArray < Array
   # element the likelihood of getting picked represented by its weight.
   def sample()
     weighted_list = Array.new
-    self.each do |element, weight|
-      weight.times { weighted_list.push(element) }
+    @weight.each do |elm, w|
+      w.times do
+        weighted_list.push(elm)
+      end
     end
     weighted_list.sample
   end
@@ -90,29 +97,31 @@ class WeightedArray < Array
   # element specified in the first argument, utilizing the == operator
   # for comparison. The weight of the matching elements is incremented by
   # the (positive or negative) amount provided as second argument.
-  def change_weight( element_to_grade, inc = 0 )
+  def set_weight( element_to_grade, weight )
     self.select{|element| element == element_to_grade}.each do |elm|
-      @weight[elm] = weight_of(elm) + inc
+      @weight[elm] = validated_weight_value(weight)
     end
   end
 
   # Increase the weight of an element; by default by 1.
   def upgrade( element, inc = 1 )
-    change_weight( element, inc )
+    new_weight = weight_of(element) + inc
+    set_weight( element, new_weight )
   end
 
   # Decrease the weight of an element; by default by 1.
   def downgrade( element, dec = 1 )
+    new_weight = weight_of(element) - dec
     begin
-      if ( weight_of(element) < dec )
+      if ( new_weight < 0 )
         raise InvalidWeightError,
               "Trying to downgrade an element to a negative weight "
               "(#{weight_of(element)-dec}). Element: #{element.to_s}"
       end
-      change_weight(element, -dec)
+      set_weight(element, new_weight)
     rescue InvalidWeightError => e
       $stderr.puts "Warning: #{e.message} Weight set to 0."
-      @weight[element] = 0
+      set_weight(element, 0)
     end
   end
 
@@ -123,18 +132,9 @@ class WeightedArray < Array
     @weight[element] || 1
   end
 
-  def debug_output()
+  def debug_info()
     self.collect{|elm| "#{elm}: #{@weight[elm]}"}.join("\n")
   end
 
 end
-
-a = WeightedArray.new
-a.push("eins", 10)
-a.push("zwei", 10.5)
-a.push("drei", 0)
-a.downgrade("drei")
-
-puts a.debug_output
-
 
