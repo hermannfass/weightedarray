@@ -1,7 +1,7 @@
 weightedarray
 =============
 
-Arrays that allow to define a likelihood for ramdom picking of elements.
+Ruby Arrays that allow to define a likelihood for ramdom picking of elements.
 
 ## Installation
 
@@ -24,10 +24,12 @@ Or install it yourself as:
       { 'Anton'=>1, 'Berti'=>1, 'Conny'=>1, 'Det'=>3, 'Edi'=>1 }
     )
     names.push( {'Fritzchen', 10} )
-    puts names.sample       # 10 times more likely 'Fritzchen' then 'Anton'.
-    names.upgrade('Det', 7)
-    puts names.sample       # Now 'Det' as likely as 'Fritzchen'.
-    
+    # The following prints 10 times more likely 'Fritzchen' than 'Anton'.
+    puts names.sample
+    names.upgrade('Anton', 7)
+    # Now the following prints 'Det' as likely as 'Fritzchen': Both now
+    # have now a likelihood of 10, thus are 10 times more likely than 'Berti'.
+    puts names.sample
 
 ## Contributing
 

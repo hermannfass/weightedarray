@@ -83,6 +83,9 @@ class WeightedArray < Array
 
   # Return a random element from the WeightedArray, giving each
   # element the likelihood of getting picked represented by its weight.
+  #--
+  # To do: This looks quite expensive.
+  #++
   def sample()
     weighted_list = Array.new
     @weight.each do |elm, w|
